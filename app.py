@@ -1,12 +1,22 @@
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 import os
+import re
 
+# ==========================
+# GLOBALS
+# ==========================
 user_lessons = {}
 user_drink_lessons = {}
 
+# ==========================
+# FLASK APP
+# ==========================
 app = Flask(__name__)
 
+# ==========================
+# HELPER FUNCTIONS
+# ==========================
 def main_menu():
     return (
         "👋 Hevoi! Tinokugamuchirai ku *IvhuRedu* 🇿🇼\n\n"
@@ -20,6 +30,53 @@ def main_menu():
         "6️⃣ Ongorora Ivhu Pasina pH"
     )
 
+def analyze_ph(message):
+    # Match pH numbers like "ph 5.5", "ph6.8", "PH 7.2"
+    match = re.search(r'ph\s*([0-9]+(\.[0-9]+)?)', message, re.IGNORECASE)
+    if not match:
+        return None
+
+    ph = float(match.group(1))
+
+    if ph < 5.5:
+        return (
+            f"📉 *pH = {ph} (Acidic)*\n\n"
+            "Ivhu rako rine acid yakawandisa.\n\n"
+            "Zvinokurudzirwa:\n"
+            "• Isa *dota* zvishoma nezvishoma\n"
+            "• Ivhu rechuru (anthill soil)\n"
+            "• Regedza manyowa ehuku akawandisa\n\n"
+            "Izvi zviite mwedzi mishoma usati wasima."
+        )
+    elif 5.5 <= ph <= 7.0:
+        return (
+            f"✅ *pH = {ph} (Yakanakira Chibage)*\n\n"
+            "Ivhu rako rakanaka kuchibage.\n\n"
+            "Kurudziro:\n"
+            "• Chengetedza nemufudze wemombe wakaorera\n"
+            "• Wedzera organic matter nguva nenguva\n"
+            "• Dzivisa dota rakawandisa"
+        )
+    elif 7.0 < ph <= 8.0:
+        return (
+            f"📈 *pH = {ph} (Alkaline)*\n\n"
+            "Ivhu rako rine alkaline yakati wandei.\n\n"
+            "Zvinokurudzirwa:\n"
+            "• Mufudze wemombe wakawanda\n"
+            "• Manyowa ehuku (zvishoma)\n"
+            "• Regedza dota"
+        )
+    else:
+        return (
+            f"⚠️ *pH = {ph} (Alkaline Yakanyanya)*\n\n"
+            "Ivhu rako rine alkaline yakanyanyisa.\n"
+            "Tinokurudzira rubatsiro rwenyanzwi.\n\n"
+            "Nyora *3* kana uchida kubatsirwa."
+        )
+
+# ==========================
+# ROUTES
+# ==========================
 @app.route("/", methods=["GET"])
 def home():
     return "IvhuRedu is running"
@@ -30,11 +87,15 @@ def whatsapp_webhook():
     resp = MessagingResponse()
     msg = resp.message()
 
-    # MAIN MENU
+    # --------------------------
+    # MAIN MENU TRIGGERS
+    # --------------------------
     if incoming_msg in ["hi", "hello", "menu", "start", "makadini"]:
         msg.body(main_menu())
 
-    # OPTION 1
+    # --------------------------
+    # OPTION 1: Kuongorora pH
+    # --------------------------
     elif incoming_msg == "1":
         msg.body(
             "🧼 *KUONGORORA pH YEIVHU RAKO*\n\n"
@@ -47,7 +108,9 @@ def whatsapp_webhook():
             "Nyora *ONGORORA* kuti ndikuudze ma steps"
         )
 
-    # OPTION 2
+    # --------------------------
+    # OPTION 2: Kugadzirisa ivhu
+    # --------------------------
     elif incoming_msg == "2":
         msg.body(
             "🥤 *KUGADZIRISA IVHU*\n\n"
@@ -55,7 +118,9 @@ def whatsapp_webhook():
             "Kana usingaizivi nyora *1*"
         )
 
-    # OPTION 3
+    # --------------------------
+    # OPTION 3: Rubatsiro
+    # --------------------------
     elif incoming_msg == "3":
         msg.body(
             "💰 *NDINODA RUBATSIRO*\n\n"
@@ -68,7 +133,9 @@ def whatsapp_webhook():
             "Nyora *PAY* kuti uwane quotation"
         )
 
-    # OPTION 4
+    # --------------------------
+    # OPTION 4: Lessons
+    # --------------------------
     elif incoming_msg == "4":
         msg.body(
             "🎁 *ZVIDZIDZO PAMUSORO PEIVHU*\n\n"
@@ -78,7 +145,9 @@ def whatsapp_webhook():
             "Nyora *MENU* kudzokera pekutanga."
         )
 
-    # ONGORA STEPS
+    # --------------------------
+    # ONGORA FLOW
+    # --------------------------
     elif incoming_msg == "ongorora":
         msg.body(
             "✅ *ONGORORA IVHU RAKO*\n\n"
@@ -86,17 +155,16 @@ def whatsapp_webhook():
             "2️⃣ Sanganisa 1L ivhu + 2.5L mvura\n"
             "3️⃣ Siya 15–20 min\n"
             "4️⃣ Pima pH ne pH paper\n\n"
-            "Nyora pH yawawana (pH 5.5)"
+            "Nyora pH yawawana (semuenzaniso: pH 5.5)"
         )
 
-    # OPTION 6
+    # --------------------------
+    # OPTION 6: No-pH examine
+    # --------------------------
     elif incoming_msg == "6":
-        msg.body(
-            "Kana usingazivi pH, nyora *EXAMINE*"
-        )
+        msg.body("Kana usingazivi pH, nyora *EXAMINE*")
 
-    # EXAMINE FLOW
-    elif incoming_msg == "examine" or incoming_msg == "kwete":
+    elif incoming_msg in ["examine", "kwete"]:
         msg.body(
             "Rudzii rwemasora ruri mumunda wako? (yero, tsvukuruka, hazvikuri)"
         )
@@ -123,7 +191,9 @@ def whatsapp_webhook():
             "Mhinduro dzichadzoka mumaawa asingapfuuri 48."
         )
 
+    # --------------------------
     # PAYMENT
+    # --------------------------
     elif incoming_msg == "pay":
         msg.body(
             "💳 *PAYMENT DETAILS*\n\n"
@@ -132,13 +202,30 @@ def whatsapp_webhook():
             "Tumira proof mushure mekubhadhara."
         )
 
+    # --------------------------
+    # pH INTELLIGENCE
+    # --------------------------
+    elif "ph" in incoming_msg:
+        result = analyze_ph(incoming_msg)
+        if result:
+            msg.body(result)
+        else:
+            msg.body(
+                "Ndakundikana kunzwisisa pH yawatumira.\n"
+                "Nyora seizvi: pH 5.5 kana ph6.8"
+            )
+
+    # --------------------------
+    # DEFAULT: main menu
+    # --------------------------
     else:
         msg.body(main_menu())
 
     return str(resp)
 
+# ==========================
+# RUN APP
+# ==========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
-
