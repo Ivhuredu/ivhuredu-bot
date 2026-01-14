@@ -173,7 +173,111 @@ def whatsapp_webhook():
         msg.body("💰 Rubatsiro: EcoCash 0773 208904, Zita: Beloved Nkomo\nTibate kana uine mibvunzo.")
 
     elif incoming == "4":
-        user_states[user] = "option4_l
+        user_states[user] = "option4_lessons"
+        msg.body(
+            "🎁 Zvidzidzo pamusoro peivhu.\n"
+            "1️⃣ Soil basics\n"
+            "2️⃣ Fertilizer usage\n"
+            "3️⃣ Crop rotation tips\n"
+            "Nyora nhamba yesarudzo yaunoda."
+        )
+
+    elif incoming == "5":
+        user_states[user] = "option5_consult"
+        msg.body("📝 Bvunza Mudhumeni Wedu, tinokupindura mumaawa 48. Nyora mubvunzo wako pano:")
+
+    elif incoming == "6":
+        user_states[user] = "q1"
+        user_data[user] = {"answers": {}}
+        msg.body(OPTION6_QUESTIONS[0]['question'])
+
+    # --------------------------
+    # PH INPUT OR PHOTO (Option 1 & 2)
+    # --------------------------
+    elif state in ["option1_ph", "option2_fix"]:
+        if "ph" in incoming:
+            msg.body(analyze_ph(incoming, user))
+            user_states[user] = "main_menu"
+        elif num_media > 0:
+            photo_url = request.values.get("MediaUrl0")
+            result = ai_photo_analysis(photo_url)
+            user_states[user] = "main_menu"
+            msg.body(result + "\n\nNyora *MENU* kudzokera kumenyu huru.")
+        else:
+            msg.body("⚠️ Ndapota nyora pH (semuenzaniso: pH 5.5) kana tumira mufananidzo wemunda wako.")
+
+    # --------------------------
+    # OPTION 4 LESSONS
+    # --------------------------
+    elif state == "option4_lessons":
+        if incoming == "1":
+            msg.body("📘 Soil Basics: Ivhu rakanaka rinofanira kuva nemanyowa, humus, uye drainage yakanaka.")
+        elif incoming == "2":
+            msg.body("📗 Fertilizer Usage: Shandisa mufudze wemombe kana manyowa zvichienderana nepH.")
+        elif incoming == "3":
+            msg.body("📙 Crop Rotation: Shandura zvirimwa kuti udzivise kushaikwa kwemanyowa.")
+        else:
+            msg.body("⚠️ Nyora 1, 2, kana 3 kuti usarudze chidzidzo.")
+        user_states[user] = "main_menu"
+        msg.body(msg.body + "\n\nNyora *MENU* kudzokera kumenyu huru.")
+
+    # --------------------------
+    # OPTION 5 USER QUESTIONS
+    # --------------------------
+    elif state == "option5_consult":
+        user_states[user] = "main_menu"
+        msg.body(f"📝 Mubvunzo wako: '{incoming}' watumirwa. Tinokupindura mumaawa 48.\n\nNyora *MENU* kudzokera kumenyu huru.")
+
+    # --------------------------
+    # OPTION 6 GUIDED QUESTIONS
+    # --------------------------
+    elif state.startswith("q"):
+        answers = user_data[user].get("answers", {})
+        q_index = int(state[1:]) - 1
+        field_name = OPTION6_QUESTIONS[q_index]['field']
+        answers[field_name] = incoming
+        user_data[user]['answers'] = answers
+
+        if q_index + 1 < len(OPTION6_QUESTIONS):
+            user_states[user] = f"q{q_index+2}"
+            msg.body(OPTION6_QUESTIONS[q_index+1]['question'])
+        else:
+            user_states[user] = "main_menu"
+            # Estimate pH from simple rules
+            est_ph = 6.0
+            if answers.get("soil_color","")=="yero" or answers.get("leaf_yellowing","")=="hongu":
+                est_ph = 5.5
+            elif answers.get("soil_color","")=="tsvuku":
+                est_ph = 6.8
+            dosage = calculate_dosage(est_ph)
+            msg.body(f"🤖 Estimated pH: {est_ph}\n{format_dosage_message(dosage)}\n\nNyora *MENU* kudzokera kumenyu huru.")
+
+    # --------------------------
+    # PHOTO UPLOAD OUTSIDE MENU
+    # --------------------------
+    elif num_media > 0:
+        photo_url = request.values.get("MediaUrl0")
+        result = ai_photo_analysis(photo_url)
+        user_states[user] = "main_menu"
+        msg.body(result + "\n\nNyora *MENU* kudzokera kumenyu huru.")
+
+    # --------------------------
+    # DEFAULT
+    # --------------------------
+    else:
+        user_states[user] = "main_menu"
+        msg.body(main_menu())
+
+    return str(resp)
+
+# ==========================
+# RUN APP
+# ==========================
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
+
+
 
 
 
