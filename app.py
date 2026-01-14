@@ -1,13 +1,13 @@
+
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
-import os
-import re
-import openai
+import os, re, base64, requests
+from openai import OpenAI
 
 # ==========================
 # OPENAI CONFIG
 # ==========================
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # ==========================
 # GLOBALS
@@ -66,47 +66,74 @@ def analyze_ph(message, user):
     return f"📊 pH = {ph}\nNyora saizi yemunda wako (m²)"
 
 # ==========================
-# 🔥 REAL AI PHOTO ANALYSIS
+# 🔥 REAL AI PHOTO ANALYSIS (FIXED)
 # ==========================
 def ai_photo_analysis(photo_url, plot_size=10):
     try:
+        # Download image from Twilio
+        twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
+        twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
+
+        img_response = requests.get(
+            photo_url,
+            auth=(twilio_sid, twilio_token),
+            timeout=10
+        )
+
+        if img_response.status_code != 200:
+            return "❌ Mufananidzo haukwanisi kuverengwa. Edza zvakare."
+
+        image_base64 = base64.b64encode(img_response.content).decode("utf-8")
+
         prompt = (
             "Uri nyanzvi yezvekurima muZimbabwe.\n"
-            "Tarisa mufananidzo weivhu kana chirimwa ichi.\n"
+            "Tarisa mufananidzo wemunda wechibage.\n\n"
             "Tsanangura:\n"
-            "1. Mamiriro evhu\n"
-            "2. Hutano hwezvirimwa\n"
-            "3. Fungidzira soil pH (ipa nhamba)\n"
-            "4. Zano rekushandisa dota, mufudze, kana ivhu rechuru\n"
-            "Pindura muShona."
+            "• Hutano hwezvirimwa\n"
+            "• Zviratidzo zvekushaikwa kwemanyowa\n"
+            "• Fungidzira soil pH (ipa nhamba)\n"
+            "• Zano rinoshanda uchishandisa dota, mufudze, ivhu rechuru\n\n"
+            "Pindura muShona yakareruka."
         )
 
-        response = openai.ChatCompletion.create(
+        completion = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": photo_url}}
-                ]
-            }],
-            temperature=0.6
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_base64}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            max_tokens=400
         )
 
-        text = response["choices"][0]["message"]["content"]
-        ph_match = re.search(r'([0-9]\.[0-9])', text)
+        text = completion.choices[0].message.content
+
+        ph_match = re.search(r'([5-8]\.[0-9])', text)
         estimated_ph = float(ph_match.group(1)) if ph_match else 6.0
+
         dosage = calculate_dosage(estimated_ph, plot_size)
 
         return (
-            "📸 *AI Yakaongorora Mufananidzo*\n\n"
+            "📸 *AI Ongororo Yemufananidzo*\n\n"
             f"{text}\n\n"
             f"📊 Estimated pH: {estimated_ph}\n\n"
             f"{format_dosage_message(dosage)}"
         )
 
-    except Exception:
-        return "⚠️ Handina kukwanisa kuongorora mufananidzo. Edza zvakare nemufananidzo wakajeka."
+    except Exception as e:
+        return (
+            "⚠️ Handikwanisi kuongorora mufananidzo izvozvi.\n"
+            "Ndapota shandisa *Option 6* kuti tibatsire."
+        )
 
 # ==========================
 # ROUTES
@@ -146,7 +173,7 @@ def whatsapp_webhook():
 
     elif state == "q3" and incoming.isdigit():
         plot = int(incoming)
-        estimated_ph = 5.5 if user_data[user]['health']=="kwete" else 6.8
+        estimated_ph = 5.5 if user_data[user]['health'] == "kwete" else 6.8
         dosage = calculate_dosage(estimated_ph, plot)
         user_states[user] = "main_menu"
         msg.body(f"🤖 Estimated pH: {estimated_ph}\n{format_dosage_message(dosage)}")
@@ -178,6 +205,7 @@ def whatsapp_webhook():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
