@@ -101,37 +101,48 @@ OPTION6_QUESTIONS = [
 # ==========================
 def ai_photo_analysis(photo_url, plot_size=10):
     try:
+        twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
+        twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
+
+        # Download image from Twilio (PRIVATE ACCESS)
+        img_response = requests.get(
+            photo_url,
+            auth=(twilio_sid, twilio_token),
+            timeout=15
+        )
+
+        if img_response.status_code != 200:
+            return "❌ Handina kukwanisa kuwana mufananidzo kubva kuWhatsApp."
+
+        image_base64 = base64.b64encode(img_response.content).decode("utf-8")
+
         prompt = (
             "You are an agricultural expert in Zimbabwe.\n"
-            "Analyze this maize field image.\n\n"
-            "Describe:\n"
+            "Analyze this maize field soil and crop image.\n\n"
+            "Explain:\n"
             "• Plant health\n"
-            "• Signs of nutrient deficiency\n"
-            "• Estimate soil pH (give a number)\n"
+            "• Soil condition\n"
+            "• Estimate soil pH (give number)\n"
             "• Practical advice using ash, manure, anthill soil\n\n"
             "Respond in simple Shona."
         )
 
-        completion = client.chat.completions.create(
+        response = client.responses.create(
             model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": photo_url   # 👈 DIRECT URL (NO BASE64)
-                            }
-                        }
-                    ]
-                }
-            ],
-            max_tokens=400
+            input=[{
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": prompt},
+                    {
+                        "type": "input_image",
+                        "image_base64": image_base64
+                    }
+                ]
+            }],
+            max_output_tokens=400
         )
 
-        text = completion.choices[0].message.content
+        text = response.output_text
 
         ph_match = re.search(r'([5-8]\.[0-9])', text)
         estimated_ph = float(ph_match.group(1)) if ph_match else 6.0
@@ -146,7 +157,7 @@ def ai_photo_analysis(photo_url, plot_size=10):
         )
 
     except Exception as e:
-        return f"⚠️ AI error: {str(e)}"
+        return f"⚠️ AI analysis failed: {str(e)}"
 
 
 # ==========================
@@ -289,6 +300,7 @@ def whatsapp_webhook():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
