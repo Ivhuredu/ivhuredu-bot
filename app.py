@@ -104,7 +104,7 @@ def ai_photo_analysis(photo_url, plot_size=10):
         twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
         twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
 
-        # Download image from Twilio (PRIVATE ACCESS)
+        # Download private Twilio image
         img_response = requests.get(
             photo_url,
             auth=(twilio_sid, twilio_token),
@@ -112,13 +112,13 @@ def ai_photo_analysis(photo_url, plot_size=10):
         )
 
         if img_response.status_code != 200:
-            return "❌ Handina kukwanisa kuwana mufananidzo kubva kuWhatsApp."
+            return "❌ Handina kukwanisa kuwana mufananidzo."
 
         image_base64 = base64.b64encode(img_response.content).decode("utf-8")
 
         prompt = (
             "You are an agricultural expert in Zimbabwe.\n"
-            "Analyze this maize field soil and crop image.\n\n"
+            "Analyze this maize field image.\n\n"
             "Explain:\n"
             "• Plant health\n"
             "• Soil condition\n"
@@ -135,7 +135,7 @@ def ai_photo_analysis(photo_url, plot_size=10):
                     {"type": "input_text", "text": prompt},
                     {
                         "type": "input_image",
-                        "image_base64": image_base64
+                        "image_url": f"data:image/jpeg;base64,{image_base64}"
                     }
                 ]
             }],
@@ -158,6 +158,7 @@ def ai_photo_analysis(photo_url, plot_size=10):
 
     except Exception as e:
         return f"⚠️ AI analysis failed: {str(e)}"
+
 
 
 # ==========================
@@ -300,6 +301,7 @@ def whatsapp_webhook():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
