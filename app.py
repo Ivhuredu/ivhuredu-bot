@@ -101,40 +101,53 @@ OPTION6_QUESTIONS = [
 # ==========================
 def ai_photo_analysis(photo_url, plot_size=10):
     try:
-        twilio_sid = os.getenv("TWILIO_ACCOUNT_SID")
-        twilio_token = os.getenv("TWILIO_AUTH_TOKEN")
-        img_response = requests.get(photo_url, auth=(twilio_sid, twilio_token), timeout=10)
-        if img_response.status_code != 200:
-            return "❌ Mufananidzo haukwanisi kuverengwa. Edza zvakare."
-
-        image_base64 = base64.b64encode(img_response.content).decode("utf-8")
         prompt = (
-            "Uri nyanzvi yezvekurima muZimbabwe.\n"
-            "Tarisa mufananidzo wemunda wechibage.\n"
-            "Tsanangura:\n"
-            "• Hutano hwezvirimwa\n"
-            "• Zviratidzo zvekushaikwa kwemanyowa\n"
-            "• Fungidzira soil pH\n"
-            "• Zano rinoshanda uchishandisa dota, mufudze, ivhu rechuru\n"
-            "Pindura muShona yakareruka."
+            "You are an agricultural expert in Zimbabwe.\n"
+            "Analyze this maize field image.\n\n"
+            "Describe:\n"
+            "• Plant health\n"
+            "• Signs of nutrient deficiency\n"
+            "• Estimate soil pH (give a number)\n"
+            "• Practical advice using ash, manure, anthill soil\n\n"
+            "Respond in simple Shona."
         )
 
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "user","content":[{"type":"text","text":prompt},
-                       {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{image_base64}"}}]}],
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": photo_url   # 👈 DIRECT URL (NO BASE64)
+                            }
+                        }
+                    ]
+                }
+            ],
             max_tokens=400
         )
 
         text = completion.choices[0].message.content
+
         ph_match = re.search(r'([5-8]\.[0-9])', text)
         estimated_ph = float(ph_match.group(1)) if ph_match else 6.0
-        dosage = calculate_dosage(estimated_ph, plot_size)
 
-        return f"📸 *AI Ongororo Yemufananidzo*\n\n{text}\n\n📊 Estimated pH: {estimated_ph}\n\n{format_dosage_message(dosage)}"
+        dosage = calculate_dosage(estimated_ph)
 
-    except:
-        return "⚠️ Handikwanisi kuongorora mufananidzo izvozvi. Shandisa Option 6."
+        return (
+            "📸 *AI Ongororo Yemufananidzo*\n\n"
+            f"{text}\n\n"
+            f"📊 Estimated pH: {estimated_ph}\n\n"
+            f"{format_dosage_message(dosage)}"
+        )
+
+    except Exception as e:
+        return f"⚠️ AI error: {str(e)}"
+
 
 # ==========================
 # WEBHOOK
@@ -276,6 +289,7 @@ def whatsapp_webhook():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
