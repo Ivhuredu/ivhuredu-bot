@@ -226,13 +226,10 @@ def whatsapp_webhook():
             "Nyora nhamba yesarudzo yaunoda."
         )
 
-    elif state == "option5_consult":
-        answer = ai_answer_question(incoming)
-        user_states[user] = "main_menu"
-        msg.body(
-            "🤖 *Mhinduro yeIvhuRedu AI*\n\n"
-            f"{answer}\n\n"
-            "Nyora *MENU* kudzokera kumenyu huru."
+    elif incoming == "5":
+        user_states[user] = "option5_consult"
+        msg.body("📝 Bvunza Mudhumeni Wedu. Nyora mubvunzo wako pano:")
+
         )
 
     elif incoming == "6":
@@ -268,14 +265,22 @@ def whatsapp_webhook():
         else:
             msg.body("⚠️ Nyora 1, 2, kana 3 kuti usarudze chidzidzo.")
         user_states[user] = "main_menu"
-        msg.body(msg.body + "\n\nNyora *MENU* kudzokera kumenyu huru.")
+        msg.body("Chidzidzo chapera.\n\nNyora *MENU* kudzokera kumenyu huru.")
+
 
     # --------------------------
     # OPTION 5 USER QUESTIONS
     # --------------------------
+    
     elif state == "option5_consult":
+        answer = ai_answer_question(incoming)   # ask OpenAI
         user_states[user] = "main_menu"
-        msg.body(f"📝 Mubvunzo wako: '{incoming}' watumirwa. Tinokupindura mumaawa 48.\n\nNyora *MENU* kudzokera kumenyu huru.")
+
+        msg.body(
+            "🤖 *Mhinduro yeIvhuRedu AI*\n\n"
+            f"{answer}\n\n"
+            "Nyora *MENU* kudzokera kumenyu huru."
+        )
 
     # --------------------------
     # OPTION 6 GUIDED QUESTIONS
@@ -325,6 +330,7 @@ def whatsapp_webhook():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
