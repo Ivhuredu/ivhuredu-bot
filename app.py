@@ -229,7 +229,7 @@ def whatsapp_webhook():
     elif incoming == "5":
         user_states[user] = "option5_consult"
         msg.body("📝 Bvunza Mudhumeni Wedu. Nyora mubvunzo wako pano:")
-        )
+        
 
     elif incoming == "6":
         user_states[user] = "q1"
@@ -329,6 +329,7 @@ def whatsapp_webhook():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
