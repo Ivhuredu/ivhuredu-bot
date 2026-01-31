@@ -117,14 +117,14 @@ def ai_photo_analysis(photo_url, plot_size=10):
         image_base64 = base64.b64encode(img_response.content).decode("utf-8")
 
         prompt = (
-            "You are an agricultural expert in Zimbabwe.\n"
-            "Analyze this maize field image.\n\n"
-            "Explain:\n"
-            "• Plant health\n"
-            "• Soil condition\n"
-            "• Estimate soil pH (give number)\n"
-            "• Practical advice using ash, manure, anthill soil\n\n"
-            "Respond in simple Shona."
+             "Uri nyanzvi yezvekurima muZimbabwe.\n"
+             "Taura muShona chaiyo inoshandiswa nevarimi vemumaruwa.\n"
+             "Tarisa mufananidzo wemunda wechibage.\n\n"
+             "Tsanangura zvakajeka:\n"
+             "• Hutano hwezvirimwa\n"
+             "• Zvinoratidza kushomeka kwemanyowa\n"
+             "• Fungidzira pH yeivhu\n"
+             "• Zano rinoshanda uchishandisa dota, mufudze, ivhu rechuru\n"
         )
 
         response = client.responses.create(
@@ -162,10 +162,11 @@ def ai_photo_analysis(photo_url, plot_size=10):
 def ai_answer_question(user_question):
     try:
         prompt = (
-            "You are an agricultural expert in Zimbabwe.\n"
-            "Answer the farmer's question clearly in simple Shona.\n"
-            "Give practical advice using local materials like manure, ash, and anthill soil.\n\n"
-            f"Question: {user_question}"
+            "Uri nyanzvi yezvekurima muZimbabwe ine ruzivo rwevarimi vemumaruwa.\n"
+            "Pindura mubvunzo wemurimi muShona chaiyo yakachena uye iri nyore kunzwisisa.\n"
+            "Shandisa mashoko anoshandiswa nevarimi veZimbabwe.\n"
+            "Dzivisa Shona yekushandura zvakananga kubva kuEnglish.\n\n"
+            f"Mubvunzo wemurimi: {user_question}"
         )
 
         response = client.responses.create(
@@ -329,6 +330,7 @@ def whatsapp_webhook():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
