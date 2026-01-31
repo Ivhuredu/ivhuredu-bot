@@ -159,6 +159,25 @@ def ai_photo_analysis(photo_url, plot_size=10):
     except Exception as e:
         return f"⚠️ AI analysis failed: {str(e)}"
 
+def ai_answer_question(user_question):
+    try:
+        prompt = (
+            "You are an agricultural expert in Zimbabwe.\n"
+            "Answer the farmer's question clearly in simple Shona.\n"
+            "Give practical advice using local materials like manure, ash, and anthill soil.\n\n"
+            f"Question: {user_question}"
+        )
+
+        response = client.responses.create(
+            model="gpt-4o-mini",
+            input=prompt,
+            max_output_tokens=300
+        )
+
+        return response.output_text
+
+    except Exception as e:
+        return f"⚠️ AI failed to answer: {str(e)}"
 
 
 # ==========================
@@ -207,9 +226,14 @@ def whatsapp_webhook():
             "Nyora nhamba yesarudzo yaunoda."
         )
 
-    elif incoming == "5":
-        user_states[user] = "option5_consult"
-        msg.body("📝 Bvunza Mudhumeni Wedu, tinokupindura mumaawa 48. Nyora mubvunzo wako pano:")
+    elif state == "option5_consult":
+        answer = ai_answer_question(incoming)
+        user_states[user] = "main_menu"
+        msg.body(
+            "🤖 *Mhinduro yeIvhuRedu AI*\n\n"
+            f"{answer}\n\n"
+            "Nyora *MENU* kudzokera kumenyu huru."
+        )
 
     elif incoming == "6":
         user_states[user] = "q1"
@@ -301,6 +325,7 @@ def whatsapp_webhook():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
